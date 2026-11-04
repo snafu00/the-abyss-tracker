@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Abyss - Parameter Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            abyss: {
+              900: '#070b12',
+              800: '#0d1527',
+              700: '#152238',
+              600: '#1d2e4a',
+              accent: '#00f2fe',
+              cyan: '#4facfe',
+              purple: '#7f53ac',
+              danger: '#ff4b5c',
+              warning: '#f9d423',
+              success: '#00e676'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts & Chart.js & Lucide Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #070b12;
+      color: #e2e8f0;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
+    }
+    .glass-card {
+      background: rgba(13, 21, 39, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0d1527;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #1d2e4a;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #00f2fe;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- TOP HEADER -->
+  <header class="glass-card sticky top-0 z-50 border-b border-slate-800 bg-abyss-900/90 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-lg glow-cyan">
+          <i data-lucide="waves" class="w-7 h-7"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-2xl font-bold tracking-tight text-white">THE ABYSS</h1>
+            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/50">
+              Saltwater Reef
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Dr. Tim's Fishless Cycle Tracker</p>
+        </div>
+      </div>
+
+      <!-- Quick Status Badges -->
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="px-3 py-1.5 rounded-lg glass-card flex items-center space-x-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+          </span>
+          <span class="text-xs text-slate-300 font-medium">Status: <strong class="text-amber-400">Nitrite Spike Phase</strong></span>
+        </div>
+
+        <div class="px-3 py-1.5 rounded-lg glass-card flex items-center space-x-2">
+          <i data-lucide="thermometer" class="w-4 h-4 text-cyan-400"></i>
+          <span class="text-xs text-slate-300">Temp: <strong id="latest-temp" class="text-white">83°F</strong></span>
+        </div>
+
+        <button id="export-btn" class="px-3 py-1.5 rounded-lg bg-abyss-700 hover:bg-abyss-600 text-xs text-slate-200 transition flex items-center space-x-1.5 border border-slate-700">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>Export CSV</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- LATEST PARAMETER SUMMARY CARDS -->
+    <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <!-- Ammonia -->
+      <div class="glass-card p-4 rounded-xl border-l-4 border-l-amber-500">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Ammonia (NH₃)</p>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="stat-ammonia" class="text-2xl font-bold text-white">2.0</span>
+          <span class="text-xs text-slate-400">ppm</span>
+        </div>
+        <p class="mt-1 text-[10px] text-amber-400 font-medium">Hold Dosing (&lt;0.2) </p>
+      </div>
+
+      <!-- Nitrite -->
+      <div class="glass-card p-4 rounded-xl border-l-4 border-l-purple-500">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Nitrite (NO₂)</p>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="stat-nitrite" class="text-2xl font-bold text-white">2.0</span>
+          <span class="text-xs text-slate-400">ppm</span>
+        </div>
+        <p class="mt-1 text-[10px] text-purple-400 font-medium">Active Spike</p>
+      </div>
+
+      <!-- Nitrate -->
+      <div class="glass-card p-4 rounded-xl border-l-4 border-l-emerald-500">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Nitrate (NO₃)</p>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="stat-nitrate" class="text-2xl font-bold text-white">20.0</span>
+          <span class="text-xs text-slate-400">ppm</span>
+        </div>
+        <p class="mt-1 text-[10px] text-emerald-400 font-medium">Cycle Active</p>
+      </div>
+
+      <!-- pH -->
+      <div class="glass-card p-4 rounded-xl border-l-4 border-l-cyan-500">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">pH Level</p>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="stat-ph" class="text-2xl font-bold text-white">8.0</span>
+          <span class="text-xs text-slate-400">pH</span>
+        </div>
+        <p class="mt-1 text-[10px] text-cyan-400 font-medium">Optimal Range</p>
+      </div>
+
+      <!-- Temp -->
+      <div class="glass-card p-4 rounded-xl border-l-4 border-l-blue-500">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Temperature</p>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="stat-temp" class="text-2xl font-bold text-white">83</span>
+          <span class="text-xs text-slate-400">°F</span>
+        </div>
+        <p class="mt-1 text-[10px] text-blue-400 font-medium">Cycle Boost Range</p>
+      </div>
+
+      <!-- Salinity -->
+      <div class="glass-card p-4 rounded-xl border-l-4 border-l-teal-500">
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Salinity</p>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="stat-salinity" class="text-2xl font-bold text-white">1.025</span>
+          <span class="text-xs text-slate-400">SG</span>
+        </div>
+        <p class="mt-1 text-[10px] text-teal-400 font-medium">Target Met</p>
+      </div>
+    </section>
+
+    <!-- CHART & SAFE RANGES GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- MAIN CHART (2 Columns on Large Screens) -->
+      <div class="lg:col-span-2 glass-card p-5 rounded-2xl flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+              <i data-lucide="line-chart" class="w-5 h-5 text-cyan-400"></i>
+              Nitrogen Cycle Dynamics
+            </h2>
+            <p class="text-xs text-slate-400">Visualizing Ammonia, Nitrite, and Nitrate conversion</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs text-slate-400">Display:</span>
+            <select id="chart-filter" class="bg-abyss-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-400">
+              <option value="all">All Parameters</option>
+              <option value="ammonia">Ammonia Only</option>
+              <option value="nitrite">Nitrite Only</option>
+              <option value="nitrate">Nitrate Only</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Chart Canvas Container -->
+        <div class="relative h-72 sm:h-80 w-full">
+          <canvas id="cycleChart"></canvas>
+        </div>
+      </div>
+
+      <!-- QUICK REFERENCE / GUIDE SIDEBAR -->
+      <div class="glass-card p-5 rounded-2xl space-y-4 flex flex-col justify-between">
+        <div>
+          <h2 class="text-lg font-semibold text-white flex items-center gap-2 mb-1">
+            <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+            Cycle Target Guidelines
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Dr. Tim's Method Parameters</p>
+
+          <div class="space-y-2.5 text-xs">
+            <div class="p-2.5 rounded-lg bg-abyss-800/80 border border-slate-800 flex justify-between items-center">
+              <div>
+                <span class="font-medium text-amber-400">Ammonia Target</span>
+                <p class="text-[11px] text-slate-400">Re-dose 2.0 ppm when Ammonia & Nitrite &lt; 0.2 ppm</p>
+              </div>
+              <span class="px-2 py-0.5 bg-amber-950 text-amber-300 rounded font-mono">0.0 - 2.0 ppm</span>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-abyss-800/80 border border-slate-800 flex justify-between items-center">
+              <div>
+                <span class="font-medium text-purple-400">Nitrite Peak</span>
+                <p class="text-[11px] text-slate-400">Water change needed if Nitrite exceeds 5.0 ppm</p>
+              </div>
+              <span class="px-2 py-0.5 bg-purple-950 text-purple-300 rounded font-mono">&lt; 5.0 ppm</span>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-abyss-800/80 border border-slate-800 flex justify-between items-center">
+              <div>
+                <span class="font-medium text-cyan-400">pH Level</span>
+                <p class="text-[11px] text-slate-400">Perform water change if pH falls below 7.0</p>
+              </div>
+              <span class="px-2 py-0.5 bg-cyan-950 text-cyan-300 rounded font-mono">7.8 - 8.3</span>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-abyss-800/80 border border-slate-800 flex justify-between items-center">
+              <div>
+                <span class="font-medium text-blue-400">Cycle Temperature</span>
+                <p class="text-[11px] text-slate-400">Accelerates bacteria growth during cycle</p>
+              </div>
+              <span class="px-2 py-0.5 bg-blue-950 text-blue-300 rounded font-mono">82°F - 85°F</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-gradient-to-r from-cyan-950/40 to-blue-950/40 border border-cyan-800/30">
+          <div class="flex items-start space-x-2">
+            <i data-lucide="info" class="w-4 h-4 text-cyan-400 shrink-0 mt-0.5"></i>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              <strong>Current Stage:</strong> Ammonia is stable at 2ppm and Nitrite is spiking (2.0ppm). Do not add ammonia until both readings fall below 0.2ppm.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- NEW ENTRY FORM & HISTORY LOG GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- ENTRY FORM (1 Column) -->
+      <div class="glass-card p-5 rounded-2xl">
+        <h2 class="text-lg font-semibold text-white flex items-center gap-2 mb-1">
+          <i data-lucide="plus-circle" class="w-5 h-5 text-cyan-400"></i>
+          Log Water Test
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">Record new parameters to update charts</p>
+
+        <form id="log-form" class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Date</label>
+            <input type="date" id="input-date" required class="w-[100%] bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-amber-400 mb-1">Ammonia (ppm)</label>
+              <input type="number" step="0.05" id="input-ammonia" placeholder="2.0" required class="w-full bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-purple-400 mb-1">Nitrite (ppm)</label>
+              <input type="number" step="0.05" id="input-nitrite" placeholder="2.0" required class="w-full bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-400">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-emerald-400 mb-1">Nitrate (ppm)</label>
+              <input type="number" step="1" id="input-nitrate" placeholder="20.0" required class="w-full bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-400">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-cyan-400 mb-1">pH Level</label>
+              <input type="number" step="0.1" id="input-ph" placeholder="8.0" required class="w-full bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-blue-400 mb-1">Temp (°F)</label>
+              <input type="number" step="1" id="input-temp" placeholder="83" required class="w-full bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-400">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-teal-400 mb-1">Salinity (SG)</label>
+              <input type="number" step="0.001" id="input-salinity" placeholder="1.025" value="1.025" class="w-full bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-400">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Notes / Dosing Actions</label>
+            <input type="text" id="input-notes" placeholder="e.g. Nitrite climbing, holding dose" class="w-full bg-abyss-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400">
+          </div>
+
+          <button type="submit" class="w-full py-2.5 mt-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold rounded-lg text-sm transition shadow-lg glow-cyan flex items-center justify-center space-x-2">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add Log Entry</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- HISTORY LOG TABLE (2 Columns) -->
+      <div class="lg:col-span-2 glass-card p-5 rounded-2xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <i data-lucide="history" class="w-5 h-5 text-cyan-400"></i>
+                Parameter History Log
+              </h2>
+              <p class="text-xs text-slate-400">Recorded test data for The Abyss</p>
+            </div>
+            
+            <button id="reset-btn" class="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition px-2 py-1 rounded bg-red-950/30 border border-red-900/40">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Reset Default Data</span>
+            </button>
+          </div>
+
+          <!-- Table Container -->
+          <div class="overflow-x-auto custom-scrollbar max-h-80 rounded-xl border border-slate-800">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-abyss-800/90 text-[11px] text-slate-400 uppercase tracking-wider sticky top-0 backdrop-blur-md">
+                  <th class="py-2.5 px-3">Date</th>
+                  <th class="py-2.5 px-3">NH3</th>
+                  <th class="py-2.5 px-3">NO2</th>
+                  <th class="py-2.5 px-3">NO3</th>
+                  <th class="py-2.5 px-3">pH</th>
+                  <th class="py-2.5 px-3">Temp</th>
+                  <th class="py-2.5 px-3">SG</th>
+                  <th class="py-2.5 px-3">Notes</th>
+                  <th class="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="log-table-body" class="divide-y divide-slate-800/60 text-xs">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
+          <span id="log-count">Total Entries: 6</span>
+          <span>Auto-saved to local storage</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800/80 py-4 bg-abyss-900 text-center text-xs text-slate-500">
+    <p>The Abyss Aquarium Manager &bull; Designed for Saltwater Cycling & Quarantine Protocols</p>
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    // INITIAL SEED DATA
+    const defaultData = [
+      { date: '2026-10-30', ammonia: 2.0, nitrite: 0.0, nitrate: 0.0, ph: 7.8, temp: 83, salinity: 1.025, notes: 'Cycle started with Dr. Tim\'s One & Only' },
+      { date: '2026-11-01', ammonia: 2.0, nitrite: 0.0, nitrate: 0.0, ph: 7.8, temp: 83, salinity: 1.025, notes: 'Bacteria establishing' },
+      { date: '2026-11-02', ammonia: 1.0, nitrite: 0.25, nitrate: 0.0, ph: 7.8, temp: 83, salinity: 1.025, notes: 'First nitrite detection' },
+      { date: '2026-11-03', ammonia: 2.0, nitrite: 0.5, nitrate: 0.0, ph: 7.8, temp: 83, salinity: 1.025, notes: 'Ammonia re-dosed to 2.0ppm' },
+      { date: '2026-11-04', ammonia: 2.0, nitrite: 0.5, nitrate: 5.0, ph: 7.8, temp: 83, salinity: 1.025, notes: 'Nitrate production confirmed!' },
+      { date: '2026-11-05', ammonia: 2.0, nitrite: 2.0, nitrate: 20.0, ph: 8.0, temp: 83, salinity: 1.025, notes: 'Nitrite spike active. Holding dose.' }
+    ];
+
+    // APPLICATION STATE
+    let logs = [];
+    let cycleChart = null;
+
+    // LOCAL STORAGE MANAGEMENT
+    function loadLogs() {
+      const saved = localStorage.getItem('abyss_logs');
+      if (saved) {
+        try {
+          logs = JSON.parse(saved);
+        } catch (e) {
+          logs = [...defaultData];
+        }
+      } else {
+        logs = [...defaultData];
+      }
+      sortLogs();
+    }
+
+    function saveLogs() {
+      localStorage.setItem('abyss_logs', JSON.stringify(logs));
+    }
+
+    function sortLogs() {
+      logs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+
+    // INITIALIZE CHART
+    function initChart() {
+      const ctx = document.getElementById('cycleChart').getContext('2d');
+      
+      cycleChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Ammonia (ppm)',
+              data: [],
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#f59e0b',
+              fill: true
+            },
+            {
+              label: 'Nitrite (ppm)',
+              data: [],
+              borderColor: '#a855f7',
+              backgroundColor: 'rgba(168, 85, 247, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#a855f7',
+              fill: true
+            },
+            {
+              label: 'Nitrate (ppm)',
+              data: [],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.05)',
+              borderWidth: 2.5,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#10b981',
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#94a3b8',
+                font: { family: 'Inter', size: 11 },
+                usePointStyle: true,
+                padding: 15
+              }
+            },
+            tooltip: {
+              backgroundColor: '#0d1527',
+              titleColor: '#00f2fe',
+              bodyColor: '#e2e8f0',
+              borderColor: '#1d2e4a',
+              borderWidth: 1,
+              padding: 10,
+              displayColors: true
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#64748b', font: { size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#64748b', font: { size: 10 } },
+              title: {
+                display: true,
+                text: 'Concentration (ppm)',
+                color: '#64748b',
+                font: { size: 10 }
+              },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // UPDATE UI & CHART WITH LOG DATA
+    function updateUI() {
+      sortLogs();
+      
+      // Update Table
+      const tableBody = document.getElementById('log-table-body');
+      tableBody.innerHTML = '';
+
+      logs.forEach((log, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-abyss-800/50 transition';
+        
+        // Format Date string
+        const formattedDate = new Date(log.date + 'T00:00:00').toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit'
+        });
+
+        row.innerHTML = `
+          <td class="py-2.5 px-3 font-medium text-slate-200">${formattedDate}</td>
+          <td class="py-2.5 px-3 text-amber-400 font-semibold">${parseFloat(log.ammonia).toFixed(1)}</td>
+          <td class="py-2.5 px-3 text-purple-400 font-semibold">${parseFloat(log.nitrite).toFixed(1)}</td>
+          <td class="py-2.5 px-3 text-emerald-400 font-semibold">${parseFloat(log.nitrate).toFixed(1)}</td>
+          <td class="py-2.5 px-3 text-cyan-300">${parseFloat(log.ph).toFixed(1)}</td>
+          <td class="py-2.5 px-3 text-slate-300">${log.temp}°F</td>
+          <td class="py-2.5 px-3 text-slate-400">${log.salinity || '1.025'}</td>
+          <td class="py-2.5 px-3 text-slate-400 max-w-[150px] truncate" title="${log.notes || ''}">${log.notes || '-'}</td>
+          <td class="py-2.5 px-3 text-right">
+            <button onclick="deleteLog(${index})" class="text-slate-500 hover:text-red-400 transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+
+      // Update Latest Parameter Cards
+      if (logs.length > 0) {
+        const latest = logs[logs.length - 1];
+        document.getElementById('stat-ammonia').innerText = parseFloat(latest.ammonia).toFixed(1);
+        document.getElementById('stat-nitrite').innerText = parseFloat(latest.nitrite).toFixed(1);
+        document.getElementById('stat-nitrate').innerText = parseFloat(latest.nitrate).toFixed(1);
+        document.getElementById('stat-ph').innerText = parseFloat(latest.ph).toFixed(1);
+        document.getElementById('stat-temp').innerText = latest.temp;
+        document.getElementById('stat-salinity').innerText = latest.salinity || '1.025';
+        document.getElementById('latest-temp').innerText = latest.temp + '°F';
+      }
+
+      document.getElementById('log-count').innerText = `Total Entries: ${logs.length}`;
+
+      // Update Chart Data
+      if (cycleChart) {
+        cycleChart.data.labels = logs.map(l => {
+          const d = new Date(l.date + 'T00:00:00');
+          return `${d.getMonth()+1}/${d.getDate()}`;
+        });
+        cycleChart.data.datasets[0].data = logs.map(l => l.ammonia);
+        cycleChart.data.datasets[1].data = logs.map(l => l.nitrite);
+        cycleChart.data.datasets[2].data = logs.map(l => l.nitrate);
+        cycleChart.update();
+      }
+
+      // Re-initialize Lucide Icons
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    // DELETE LOG ENTRY
+    window.deleteLog = function(index) {
+      logs.splice(index, 1);
+      saveLogs();
+      updateUI();
+    };
+
+    // FORM SUBMISSION
+    document.getElementById('log-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const newLog = {
+        date: document.getElementById('input-date').value,
+        ammonia: parseFloat(document.getElementById('input-ammonia').value),
+        nitrite: parseFloat(document.getElementById('input-nitrite').value),
+        nitrate: parseFloat(document.getElementById('input-nitrate').value),
+        ph: parseFloat(document.getElementById('input-ph').value),
+        temp: parseInt(document.getElementById('input-temp').value),
+        salinity: parseFloat(document.getElementById('input-salinity').value) || 1.025,
+        notes: document.getElementById('input-notes').value
+      };
+
+      logs.push(newLog);
+      saveLogs();
+      updateUI();
+
+      // Clear Form Notes
+      document.getElementById('input-notes').value = '';
+    });
+
+    // FILTER CHART DATASETS
+    document.getElementById('chart-filter').addEventListener('change', function(e) {
+      const val = e.target.value;
+      if (!cycleChart) return;
+
+      cycleChart.data.datasets.forEach((ds, idx) => {
+        if (val === 'all') {
+          ds.hidden = false;
+        } else if (val === 'ammonia' && idx === 0) {
+          ds.hidden = false;
+        } else if (val === 'nitrite' && idx === 1) {
+          ds.hidden = false;
+        } else if (val === 'nitrate' && idx === 2) {
+          ds.hidden = false;
+        } else {
+          ds.hidden = true;
+        }
+      });
+      cycleChart.update();
+    });
+
+    // RESET TO DEFAULT DATA
+    document.getElementById('reset-btn').addEventListener('click', function() {
+      if (confirm('Are you sure you want to reset to the default cycle dataset?')) {
+        logs = [...defaultData];
+        saveLogs();
+        updateUI();
+      }
+    });
+
+    // EXPORT CSV
+    document.getElementById('export-btn').addEventListener('click', function() {
+      if (logs.length === 0) return;
+      
+      let csvContent = "data:text/csv;charset=utf-8,Date,Ammonia(ppm),Nitrite(ppm),Nitrate(ppm),pH,Temp(F),Salinity(SG),Notes\n";
+      logs.forEach(l => {
+        csvContent += `${l.date},${l.ammonia},${l.nitrite},${l.nitrate},${l.ph},${l.temp},${l.salinity || 1.025},"${l.notes || ''}"\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'The_Abyss_Water_Parameters.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    // INITIALIZATION ON LOAD
+    window.onload = function() {
+      // Set today's date in form default
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('input-date').value = today;
+
+      loadLogs();
+      initChart();
+      updateUI();
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    };
+  </script>
+</body>
+</html>
